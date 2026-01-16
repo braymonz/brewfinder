@@ -1,6 +1,4 @@
 "use client";
-
-import * as React from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,11 +23,11 @@ import {
 	SidebarMenuItem,
 	useSidebar,
 } from "@/components/ui/sidebar";
-import { useSession } from "next-auth/react";
 import { UserMenu } from "@/components/UserMenu";
 import { Separator } from "@/components/ui/separator";
 import { ModeToggle } from "@/components/ModeToggle";
 import { GITHUB_URL } from "@/lib/constants";
+import { authClient } from "@/lib/auth-client";
 
 export const navItems = [
 	{
@@ -60,7 +58,7 @@ type Props = {
 
 export function AppSidebar({ className }: Props) {
 	const { toggleSidebar } = useSidebar();
-	const { data: session } = useSession();
+	const { data: session } = authClient.useSession();
 	return (
 		<Sidebar
 			side="right"
@@ -92,12 +90,12 @@ export function AppSidebar({ className }: Props) {
 											className="cursor-pointer text-primary-foreground"
 											type="submit"
 										>
-											<Link href={`/sign-in`}>
+											<Link href={`/signin`}>
 												Sign In
 											</Link>
 										</Button>
 									) : (
-										<UserMenu session={session} />
+										<UserMenu session={session.session} />
 									)}
 									<Separator
 										orientation="vertical"

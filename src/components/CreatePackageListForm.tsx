@@ -57,7 +57,6 @@ import {
 	IconRendererLucide,
 	useIconPickerLucide,
 } from "@/components/IconPicker";
-import { useSession } from "next-auth/react";
 import { PackageDetails, PackageList } from "@/models/packageLists";
 import { Separator } from "./ui/separator";
 import {
@@ -71,6 +70,7 @@ import {
 	AlertDialogTitle,
 	AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { authClient } from "@/lib/auth-client";
 
 type Props = {
 	packages: PackageFilteredData[];
@@ -89,7 +89,7 @@ export default function CreatePackageListForm({
 }: Props) {
 	const { icons } = useIconPickerLucide();
 
-	const { data: session } = useSession();
+	const { data: session } = authClient.useSession();
 
 	const [isformOpen, setIsformOpen] = useState(isOpen);
 

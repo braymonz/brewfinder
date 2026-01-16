@@ -54,11 +54,10 @@ import {
 import { toast } from "sonner";
 import { PackageDetails, PackageList } from "@/models/packageLists";
 import { ObjectId } from "mongoose";
-import { useSession } from "next-auth/react";
 import LucideDynamicIcon from "@/components/LucideDynamicIcon";
 import CreatePackageListForm from "@/components/CreatePackageListForm";
-import { User } from "next-auth";
 import { SonnerSuccessIcon } from "@/lib/icons";
+import { authClient } from "@/lib/auth-client";
 
 const MAX_VISIBLE_PACKAGES = 6;
 
@@ -72,7 +71,9 @@ export default function ListDetailsPage() {
 
 	const listId = params.id;
 
-	const { data: session } = useSession();
+    const { 
+        data: session, 
+    } = authClient.useSession() 
 
 	const router = useRouter();
 	const pathname = usePathname();
@@ -159,7 +160,7 @@ export default function ListDetailsPage() {
 		// console.log({ session });
 
 		if (!session) {
-			return router.push("/sign-in?callbackUrl=" + pathname);
+			return router.push("/signin?callbackURL=" + pathname);
 		}
 
 		setIsLiked(!isLiked);

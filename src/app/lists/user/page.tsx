@@ -3,34 +3,44 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import { Heart, ListPlus, Package } from "lucide-react";
-import { useSession } from "next-auth/react";
-import { useParams } from "next/navigation";
+import { useParams, redirect } from "next/navigation";
 import useSWR from "swr";
 import { PackageList } from "@/models/packageLists";
 import CreatePackageListForm from "@/components/CreatePackageListForm";
 import { PackageFilteredData } from "@/types/homebrew";
 import PackageListCard from "@/components/PackageListCard";
+import { authClient } from "@/lib/auth-client";
 
 const fetcher = ([url, id]: [string, string?]) =>
-	fetch(`${url}/${id ? id : ""}`).then((res) => res.json());
+	fetch(`${url}/${id || ""}`).then((res) => res.json());
 
 export default function MyLists() {
-	const { data: session } = useSession();
 	const params = useParams();
-	const { createNewList, package: defaultPkg } = params;
-	const userId = session?.user?.id;
+
+	const { data, error, isPending } = authClient.useSession();
+
+	const userId = data?.user?.id;
+
 	const { data: lists } = useSWR<PackageList[], Error>(
-		["/api/packageLists/getByUserId", userId as string],
+		["/api/packageLists/getByUserId", userId],
 		fetcher,
 	);
 	const { data: likedLists } = useSWR<PackageList[], Error>(
-		["/api/packageLists/getLikedByUserId", userId as string],
+		["/api/packageLists/getLikedByUserId", userId],
 		fetcher,
 	);
 	const { data: packagesData } = useSWR<PackageFilteredData[], Error>(
 		["/api/packages/getAll"],
 		fetcher,
 	);
+	if (isPending) {
+		return <div>Pending</div>;
+	}
+	if (!data || error) {
+		redirect("/signin");
+	}
+	const { createNewList, package: defaultPkg } = params;
+
 	return (
 		<div className="space-y-8">
 			<h1 className="text-3xl font-bold">My Lists</h1>
@@ -82,24 +92,23 @@ export default function MyLists() {
 						</div>
 					) : (
 						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-							{lists &&
-								lists.map((list) => (
-									<PackageListCard
-										key={list._id?.toString() as string}
-										listId={list._id?.toString() as string}
-										listName={list.name}
-										packageCount={list.packages.length}
-										installationCommand={
-											list.installationCommand
-										}
-										listDescription={list.description}
-										owner={
-											(list.owner?.name ??
-												list.owner.email) as string
-										}
-										icon={list.icon}
-									/>
-								))}
+							{lists?.map((list) => (
+								<PackageListCard
+									key={list._id?.toString()}
+									listId={list._id?.toString() as string}
+									listName={list.name}
+									packageCount={list.packages.length}
+									installationCommand={
+										list.installationCommand
+									}
+									listDescription={list.description}
+									owner={
+										list.owner?.name ??
+										list.owner.email
+									}
+									icon={list.icon}
+								/>
+							))}
 						</div>
 					)}
 				</TabsContent>
@@ -126,8 +135,7 @@ export default function MyLists() {
 						</div>
 					) : (
 						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-							{likedLists &&
-								likedLists.map((list) => (
+							{likedLists?.map((list) => (
 									<PackageListCard
 										key={list._id?.toString() as string}
 										listId={list._id?.toString() as string}
@@ -139,7 +147,7 @@ export default function MyLists() {
 										listDescription={list.description}
 										owner={
 											(list.owner?.name ??
-												list.owner.email) as string
+												list.owner.email)
 										}
 										icon={list.icon}
 									/>

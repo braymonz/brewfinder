@@ -10,10 +10,10 @@ import {
 import AddPackageToListForm from "@/components/AddPackageToListForm";
 import { PackageDetails, PackageList } from "@/models/packageLists";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useSession } from "next-auth/react";
 import useSWR from "swr";
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import { authClient } from "@/lib/auth-client";
 
 interface PackageHeaderProps {
 	name: string;
@@ -30,7 +30,7 @@ export function PackageHeader({
 	packageType,
 	currentPackageId,
 }: PackageHeaderProps) {
-	const { data: session } = useSession();
+	const { data: session } = authClient.useSession();
 	const router = useRouter();
 	const pathname = usePathname();
 	const searchParams = useSearchParams();
@@ -47,7 +47,7 @@ export function PackageHeader({
 	const handleClick = () => {
 		if (!session) {
 			return router.push(
-				`/sign-in?callbackUrl=${pathname}${encodeURIComponent("?" + searchParams)}`,
+				`/signin?callbackURL=${pathname}${encodeURIComponent("?" + searchParams)}`,
 			);
 		}
 	};

@@ -7,7 +7,6 @@ import Header from "@/components/Header";
 import "./globals.css";
 import Footer from "@/components/Footer";
 import { Toaster } from "@/components/ui/sonner";
-import SessionWrapper from "@/components/SessionWrapper";
 
 const geistSans = Geist({
 	variable: "--font-geist-sans",
@@ -41,24 +40,22 @@ export default function RootLayout({
 				className={`${geistSans.variable} ${geistMono.variable} relative overflow-y-auto antialiased min-h-screen flex flex-col `}
 			>
 				<div className="bg-[url(/pattern-randomized.svg)] not-dark:bg-[url(/pattern-randomized-light.svg)] ">
-					<SessionWrapper>
-						<ThemeProvider
-							attribute="class"
-							defaultTheme="system"
-							enableSystem
-							disableTransitionOnChange
-						>
-							<SidebarProvider className="flex flex-col">
-								<Header />
-								<AppSidebar className="md:hidden" />
-								<main className="container mx-auto px-4 py-8 grow flex flex-col w-screen">
-									{children}
-									<Toaster />
-								</main>
-								<Footer />
-							</SidebarProvider>
-						</ThemeProvider>
-					</SessionWrapper>
+					<ThemeProvider
+						attribute="class"
+						defaultTheme="system"
+						enableSystem
+						disableTransitionOnChange
+					>
+						<SidebarProvider className="flex flex-col">
+							<Header />
+							<AppSidebar className="md:hidden" />
+							<main className="container mx-auto px-4 py-8 grow flex flex-col w-screen">
+								{children}
+								<Toaster />
+							</main>
+							<Footer />
+						</SidebarProvider>
+					</ThemeProvider>
 				</div>
 			</body>
 		</html>

@@ -2,7 +2,6 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { signOut as nextAuthSignOut } from "next-auth/react";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -12,14 +11,15 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { LogOut } from "lucide-react";
-import { Session } from "next-auth";
-import { logout } from "@/actions/auth";
+import { User } from "better-auth";
+import { signOut } from "@/actions/auth";
 
 type Props = {
-	session: Session;
+	user: User;
 };
 
-export function UserMenu({ session }: Props) {
+export function UserMenu({ user }: Readonly<Props>) {
+	console.log("user in UserMenu:", user);
 	return (
 		<DropdownMenu modal={false}>
 			<DropdownMenuTrigger asChild>
@@ -28,15 +28,15 @@ export function UserMenu({ session }: Props) {
 					className="h-8 w-8 rounded-full cursor-pointer m-0"
 				>
 					<Avatar className="h-8 w-8">
-						{session.user?.image && (
+						{user?.image && (
 							<AvatarImage
-								src={session.user?.image}
-								alt={session.user?.email as string}
+								src={user.image}
+								alt={user.email}
 							/>
 						)}
 
 						<AvatarFallback className="">
-							{session.user?.email?.substring(0, 2).toUpperCase()}
+							{user?.email?.substring(0, 2).toUpperCase()}
 						</AvatarFallback>
 					</Avatar>
 				</Button>
@@ -44,13 +44,13 @@ export function UserMenu({ session }: Props) {
 			<DropdownMenuContent className="w-56" align="end" forceMount>
 				<DropdownMenuLabel className="font-normal">
 					<div className="flex flex-col space-y-1">
-						{session.user?.name && (
+						{user?.name && (
 							<p className="text-sm font-medium leading-none">
-								{session.user?.name}
+								{user?.name}
 							</p>
 						)}
 						<p className="text-sm leading-none text-muted-foreground">
-							{session.user?.email}
+							{user?.email}
 						</p>
 					</div>
 				</DropdownMenuLabel>
@@ -70,12 +70,7 @@ export function UserMenu({ session }: Props) {
 				<DropdownMenuSeparator />
 				<DropdownMenuItem className="hover:bg-transparent!">
 					<form
-						action={async () => {
-							// double sign out to ensure the session is cleared based on fix described on
-							// https://github.com/nextauthjs/next-auth/discussions/11271#discussioncomment-12272576
-							await logout();
-							await nextAuthSignOut({ redirectTo: "/" });
-						}}
+						action={signOut}
 						className="w-full"
 					>
 						<Button

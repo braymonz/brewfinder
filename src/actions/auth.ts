@@ -1,55 +1,119 @@
 "use server";
 
-import { signIn, signOut } from "@/lib/auth";
-import { AuthError } from "next-auth";
+import { auth } from "@/lib/auth";
+import { AuthVerificationCodes, Provider } from "@/types/auth";
 import { redirect } from "next/navigation";
-import { EMAIL_PROVIDER_ID } from "@/lib/constants";
+import { headers } from "next/headers";
+import { APIError } from "better-auth/api";
 
-const SIGNIN_ERROR_URL = "/";
-
-type Provider = {
-	id: string;
-	name: string;
+const catchAuthError = (
+	error: unknown,
+	action: "signin" | "signup" | "verify-email",
+) => {
+	if (error instanceof APIError) {
+		console.error(
+			`Error with ${action}:`,
+			error.name,
+			error.body,
+			error.statusCode,
+			error.status,
+		);
+		redirect(`/${action}?error=${error.body?.code || "unknown_error"}`);
+	} else {
+		console.error("Unexpected error:", error);
+	}
+	console.log({ error });
+	redirect(`/${action}?error=unknown_error`);
 };
 
-export const login = async (
-	provider: Provider,
-	callbackUrl?: string,
-	// ...args: any[]
+export const loginWithSocials = async (
+	provider: Provider["id"],
+	callbackURL?: string,
 ) => {
 	try {
-		await signIn(provider.id, {
-			redirectTo: callbackUrl ?? "",
-		});
-	} catch (error) {
-		// Signin can fail for a number of reasons, such as the user
-		// not existing, or the user not having the correct role.
-		// In some cases, you may want to redirect to a custom error
-		if (error instanceof AuthError) {
-			return redirect(`${SIGNIN_ERROR_URL}?error=${error.type}`);
-		}
+		const { redirect: isRedirectRequired, url } =
+			await auth.api.signInSocial({
+				body: {
+					provider,
+					callbackURL: callbackURL ?? "/",
+				},
+			});
 
-		// Otherwise if a redirects happens Next.js can handle it
-		// so you can just re-thrown the error and let Next.js handle it.
-		// Docs:
-		// https://nextjs.org/docs/app/api-reference/functions/redirect#server-component
-		throw error;
+		if (url && isRedirectRequired) {
+			redirect(url);
+		}
+	} catch (error: unknown) {
+		catchAuthError(error, "signin");
 	}
 };
 
-export const loginWithEmail = async (formData: FormData) => {
-	"use server";
+export const signOut = async () => {
+	await auth.api.signOut({
+		// This endpoint requires session cookies
+		headers: await headers(),
+	});
+	redirect("/");
+};
+
+export const loginWithEmail = async (
+	formData: FormData,
+	callbackURL?: string,
+) => {
+	const email = formData.get("email") as string;
+	const password = formData.get("password") as string;
+	const rememberMe = formData.get("remember") === "on";
 	try {
-		await signIn(EMAIL_PROVIDER_ID, formData);
-	} catch (error) {
-		if (error instanceof AuthError) {
-			return redirect(`${SIGNIN_ERROR_URL}?error=${error.type}`);
-		}
-		throw error;
+		await auth.api.signInEmail({
+			body: {
+				email,
+				password,
+				rememberMe,
+				callbackURL: callbackURL ?? "/",
+			},
+			// This endpoint requires session cookies.
+			headers: await headers(),
+		});
+	} catch (error: unknown) {
+		catchAuthError(error, "signin");
 	}
 };
 
-export const logout = async () => {
-	"use server";
-	await signOut({ redirect: false });
-};
+export async function signUpWithEmail(
+	formData: FormData,
+	callbackURL?: string,
+) {
+	const email = formData.get("email") as string;
+	const password = formData.get("password") as string;
+	const name = formData.get("name") as string;
+
+	try {
+		await auth.api.signUpEmail({
+			body: {
+				email,
+				password,
+				name,
+				callbackURL: callbackURL ?? "/",
+			},
+			asResponse: true,
+		});
+	} catch (error: unknown) {
+		catchAuthError(error, "signup");
+	}
+}
+
+export async function sendVerificationEmail(formData: FormData) {
+	const email = formData.get("email") as string;
+
+	try {
+		await auth.api.sendVerificationEmail({
+			body: {
+				email,
+			},
+		});
+	} catch (error: unknown) {
+		catchAuthError(error, "verify-email");
+	}
+	redirect(
+		`/verify-email?verification_status=${AuthVerificationCodes.VERIFICATION_SENT}`,
+	);
+}

@@ -1,4 +1,4 @@
-import { connectDB } from "@/lib/db";
+import { connectToDatabase as connectDB } from "@/lib/db";
 import { NextResponse } from "next/server";
 import PackageListModel, { PackageList } from "@/models/packageLists";
 

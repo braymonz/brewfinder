@@ -1,23 +1,28 @@
-import mongoose from "mongoose";
+import mongoose, { Mongoose } from "mongoose";
 
-export async function connectDB() {
-	try {
-		const { connection } = await mongoose.connect(
-			process.env.MONGODB_URI as string,
-		);
-		if (connection.readyState === 1) {
-			return Promise.resolve(connection);
-		}
-	} catch (error) {
-		console.error("Error connecting to database: ", error);
-		return Promise.reject(error);
-	}
+const globalWithMongoose = globalThis as typeof globalThis & {
+  mongoose?: {
+    conn: Mongoose | null;
+    promise: Promise<Mongoose> | null;
+  };
+};
+
+globalWithMongoose.mongoose ??= { conn: null, promise: null };
+
+const cached = globalWithMongoose.mongoose;
+
+export async function connectToDatabase(): Promise<Mongoose> {
+  if (cached.conn) return cached.conn;
+
+  cached.promise ??= mongoose.connect(process.env.MONGODB_URI as string, {
+    dbName: process.env.MONGODB_DB_NAME,
+  });
+
+  cached.conn = await cached.promise;
+  return cached.conn;
 }
+
 export async function getConnectionDBClient(): Promise<mongoose.mongo.MongoClient> {
-	return await connectDB().then((connection) => {
-		if (!connection) {
-			throw new Error("Failed to get a valid connection");
-		}
-		return connection.getClient();
-	});
+  const connection = await connectToDatabase();
+  return connection.connection.getClient();
 }

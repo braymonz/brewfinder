@@ -1,39 +1,64 @@
-import GitHub, { GitHubProfile } from "next-auth/providers/github";
-import Google, { GoogleProfile } from "next-auth/providers/google";
-import { NextAuthConfig } from "next-auth";
+import { mongodbAdapter } from "better-auth/adapters/mongodb";
+import { getConnectionDBClient } from "@/lib/db";
+import { magicLink } from "better-auth/plugins";
+import { nextCookies } from "better-auth/next-js";
+import { sendTransactionalEmail } from "@/lib/email";
+import { confirmEmailTemplate } from "@/resources/confirmEmailTemplate";
+import type { User } from "better-auth";
 
-export const privateRoutes = ["/lists/user"];
+const client = await getConnectionDBClient();
 
-// Notice this is only an object, not a full Auth.js instance
-// Fixed edge runtime error by following the guide here:
-// https://authjs.dev/guides/edge-compatibility
-export default {
-	providers: [
-		GitHub({
-			clientId: process.env.AUTH_GITHUB_ID as string,
-			clientSecret: process.env.AUTH_GITHUB_SECRET as string,
-			profile: (profile: GitHubProfile) => {
-				return {
-					// Ensure the 'id' is returned to fix OAuthAccountNotLinked error
-					// https://github.com/nextauthjs/next-auth/issues/9992#issuecomment-2585799270
-					id: profile.id.toString(),
-					name: profile.name,
-					email: profile.email,
-					image: profile.avatar_url,
-				};
-			},
-		}),
-		Google({
-			profile: (profile: GoogleProfile) => {
-				return {
-					// Ensure the 'id' (sub) is returned to fix OAuthAccountNotLinked error
-					// https://github.com/nextauthjs/next-auth/issues/9992#issuecomment-2585799270
-					id: profile.sub,
-					name: profile.name,
-					email: profile.email,
-					image: profile.picture,
-				};
-			},
-		}),
+const authConfig = {
+	database: mongodbAdapter(client.db()),
+	plugins: [
+		nextCookies(), // make sure this is the last plugin in the array
 	],
-} as NextAuthConfig;
+	session: {
+		cookieCache: {
+			enabled: true,
+			maxAge: 5 * 60, // Cache duration in seconds
+		},
+	},
+	emailAndPassword: {
+		enabled: true,
+		requireEmailVerification: true,
+	},
+	emailVerification: {
+		sendOnSignUp: true,
+		sendOnSignIn: true,
+		autoSignInAfterVerification: true,
+		sendVerificationEmail: async ({
+			user,
+			url,
+			token,
+		}: {
+			user: User;
+			url: string;
+			token: string;
+		}) => {
+			void sendTransactionalEmail({
+				to: user.email,
+				toName: user.name || "",
+				subject: "Verify your email address",
+				htmlContent: confirmEmailTemplate(
+					user.name || "Brewfinder user",
+					url,
+					token,
+				),
+			});
+		},
+	},
+	socialProviders: {
+		github: {
+			clientId: process.env.BETTER_AUTH_GITHUB_ID as string,
+			clientSecret: process.env.BETTER_AUTH_GITHUB_SECRET as string,
+		},
+		google: {
+			clientId: process.env.BETTER_AUTH_GOOGLE_CLIENT_ID as string,
+			clientSecret: process.env
+				.BETTER_AUTH_GOOGLE_CLIENT_SECRET as string,
+		},
+	},
+};
+
+export default authConfig;

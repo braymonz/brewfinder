@@ -1,5 +1,5 @@
 import mongoose, { ObjectId } from "mongoose";
-import { User } from "next-auth";
+import { User } from "better-auth";
 
 export type PackageDetails = {
 	id: string;

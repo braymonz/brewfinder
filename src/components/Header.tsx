@@ -6,11 +6,13 @@ import { auth } from "@/lib/auth";
 import { UserMenu } from "./UserMenu";
 import { Separator } from "./ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-
+import { headers } from "next/headers";
 import Navbar from "@/components/Navbar";
 
 export default async function Header() {
-	const session = await auth();
+	const session = await auth.api.getSession({
+		headers: await headers(),
+	});
 
 	return (
 		<header className="border-b text-secondary-foreground bg-secondary/50 backdrop-blur-xl z-50">
@@ -23,15 +25,15 @@ export default async function Header() {
 					<Navbar />
 				</div>
 				<div className="items-center space-x-2 hidden md:flex">
-					{!session ? (
+					{session ? (
+						<UserMenu user={session.user} />
+					) : (
 						<Button
 							className="cursor-pointer text-primary-foreground"
 							type="submit"
 						>
-							<Link href={`/sign-in`}>Sign In</Link>
+							<Link href={`/signin`}>Sign In</Link>
 						</Button>
-					) : (
-						<UserMenu session={session} />
 					)}
 					<Separator
 						orientation="vertical"
