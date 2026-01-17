@@ -6,8 +6,14 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { signOut, signUpWithEmail } from "@/actions/auth";
 import Link from "next/link";
-
-export default async function SignupPage() {
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { BASE_ERROR_CODES } from "better-auth";
+import { ErrorCodes } from "@/types/auth";
+type PageProps = {
+	searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+};
+export default async function SignupPage(props: Readonly<PageProps>) {
+	const { error } = await props.searchParams;
 	const session = await auth.api.getSession({
 		headers: await headers(),
 	});
@@ -92,6 +98,17 @@ export default async function SignupPage() {
 									className="mt-1 bg-secondary"
 								/>
 							</div>
+							{error && (
+								<Alert variant="destructive">
+									<AlertDescription className="items-center flex justify-between">
+										{BASE_ERROR_CODES[
+											error as keyof typeof BASE_ERROR_CODES
+										] ??
+											"An unexpected error occurred. Please try again or contact support."}
+									</AlertDescription>
+								</Alert>
+							)}
+
 							<Button
 								type="submit"
 								className="w-full text-md cursor-pointer text-primary-foreground"

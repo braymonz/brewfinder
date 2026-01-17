@@ -76,12 +76,10 @@ export const loginWithEmail = async (
 	} catch (error: unknown) {
 		catchAuthError(error, "signin");
 	}
+	redirect("/");
 };
 
-export async function signUpWithEmail(
-	formData: FormData,
-	callbackURL?: string,
-) {
+export async function signUpWithEmail(formData: FormData) {
 	const email = formData.get("email") as string;
 	const password = formData.get("password") as string;
 	const name = formData.get("name") as string;
@@ -92,13 +90,15 @@ export async function signUpWithEmail(
 				email,
 				password,
 				name,
-				callbackURL: callbackURL ?? "/",
+				callbackURL: `/verify-email?verification_status=${AuthVerificationCodes.VERIFICATION_LINK_CLICKED}`,
 			},
-			asResponse: true,
 		});
 	} catch (error: unknown) {
 		catchAuthError(error, "signup");
 	}
+	redirect(
+		`/verify-email?verification_status=${AuthVerificationCodes.VERIFICATION_SENT}`,
+	);
 }
 
 export async function sendVerificationEmail(formData: FormData) {

@@ -12,4 +12,5 @@ export enum AuthVerificationCodes {
 	INVALID_TOKEN = "invalid_token",
 	VERIFICATION_SENT = "verification_sent",
 	VERIFIED = "verified",
+	VERIFICATION_LINK_CLICKED = "verification_link_clicked",
 }

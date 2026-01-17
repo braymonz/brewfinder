@@ -1,6 +1,5 @@
 import { mongodbAdapter } from "better-auth/adapters/mongodb";
 import { getConnectionDBClient } from "@/lib/db";
-import { magicLink } from "better-auth/plugins";
 import { nextCookies } from "better-auth/next-js";
 import { sendTransactionalEmail } from "@/lib/email";
 import { confirmEmailTemplate } from "@/resources/confirmEmailTemplate";
@@ -30,11 +29,9 @@ const authConfig = {
 		sendVerificationEmail: async ({
 			user,
 			url,
-			token,
 		}: {
 			user: User;
 			url: string;
-			token: string;
 		}) => {
 			void sendTransactionalEmail({
 				to: user.email,
@@ -43,7 +40,6 @@ const authConfig = {
 				htmlContent: confirmEmailTemplate(
 					user.name || "Brewfinder user",
 					url,
-					token,
 				),
 			});
 		},
