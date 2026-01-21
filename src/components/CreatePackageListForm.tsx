@@ -239,7 +239,7 @@ export default function CreatePackageListForm({
 	useEffect(() => {
 		if (currentData) {
 			form.setValue("name", currentData.name);
-			form.setValue("description", currentData.description);
+			form.setValue("description", currentData.description || "");
 			form.setValue(
 				"packages",
 				currentData.packages.map((pkg) =>
