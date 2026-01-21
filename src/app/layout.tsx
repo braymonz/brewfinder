@@ -39,7 +39,8 @@ export default function RootLayout({
 			<body
 				className={`${geistSans.variable} ${geistMono.variable} relative overflow-y-auto antialiased min-h-screen flex flex-col `}
 			>
-				<div className="bg-[url(/pattern-randomized.svg)] not-dark:bg-[url(/pattern-randomized-light.svg)] ">
+				{/* <div className="bg-[url(/pattern-randomized.svg)] not-dark:bg-[url(/pattern-randomized-light.svg)] "> */}
+				<div>
 					<ThemeProvider
 						attribute="class"
 						defaultTheme="system"
@@ -51,7 +52,7 @@ export default function RootLayout({
 							<AppSidebar className="md:hidden" />
 							<main className="container mx-auto px-4 py-8 grow flex flex-col w-screen">
 								{children}
-								<Toaster />
+								<Toaster richColors position="top-right" />
 							</main>
 							<Footer />
 						</SidebarProvider>

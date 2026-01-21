@@ -11,14 +11,14 @@ async function getAnalyticsData() {
 		fetch(
 			"https://formulae.brew.sh/api/analytics/install-on-request/30d.json",
 			{
-				next: { revalidate: 3600 }, // Cache for 1 hour
+				next: { revalidate: 3600 * 24 }, // Cache for 24 hours
 			},
 		),
 		fetch("https://formulae.brew.sh/api/analytics/cask-install/30d.json", {
-			next: { revalidate: 3600 },
+			next: { revalidate: 3600 * 24 }, // Cache for 24 hours
 		}),
 		fetch("https://api.github.com/repos/Homebrew/brew/releases/latest", {
-			next: { revalidate: 3600 },
+			next: { revalidate: 3600 * 24 }, // Cache for 24 hours
 		}),
 	]);
 
@@ -152,8 +152,8 @@ export default async function Home() {
 						<CardContent className="space-y-2 text-muted-foreground">
 							<p>
 								Command-line tools and libraries installed into
-								<strong> /usr/local</strong> or
-								<strong> /opt/homebrew</strong>.
+								<strong>/usr/local</strong> or
+								<strong>/opt/homebrew</strong>.
 							</p>
 							<ul className="list-disc pl-5 space-y-1 text-sm">
 								<li>Typically run in the terminal</li>
@@ -175,7 +175,7 @@ export default async function Home() {
 							<p>
 								Graphical macOS apps distributed as .app, .dmg,
 								or .pkg, typically installed into
-								<strong> /Applications</strong>.
+								<strong>/Applications</strong>.
 							</p>
 							<ul className="list-disc pl-5 space-y-1 text-sm">
 								<li>GUI applications</li>

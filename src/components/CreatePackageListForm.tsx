@@ -1,12 +1,13 @@
 "use client";
-import { Fragment, KeyboardEvent, useEffect, useState } from "react";
+import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { CheckIcon, Edit } from "lucide-react";
+import { CheckIcon, Edit, ChevronsUpDown, Trash2 } from "lucide-react";
+import type { MultiSelectGroup } from "@/components/multi-select";
 import {
 	Dialog,
 	DialogContent,
@@ -27,14 +28,6 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-	MultiSelector,
-	MultiSelectorContent,
-	MultiSelectorInput,
-	MultiSelectorItem,
-	MultiSelectorList,
-	MultiSelectorTrigger,
-} from "@/components/ui/extension/multi-select";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
 	Command,
@@ -49,10 +42,8 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
-import { ChevronsUpDown, Trash2 } from "lucide-react";
 import { PackageFilteredData } from "@/types/homebrew";
 import { formSchema } from "@/schemas/zod";
-import { Badge } from "./ui/badge";
 import {
 	IconRendererLucide,
 	useIconPickerLucide,
@@ -71,6 +62,10 @@ import {
 	AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { authClient } from "@/lib/auth-client";
+import { MultiSelect } from "./multi-select";
+import PackageImage from "./PackageImage";
+import { useRouter } from "next/navigation";
+import { useSWRConfig } from "swr";
 
 type Props = {
 	packages: PackageFilteredData[];
@@ -86,21 +81,149 @@ export default function CreatePackageListForm({
 	isOpen = false,
 	defaultPackage = "",
 	triggerClassName,
-}: Props) {
+}: Readonly<Props>) {
+	const router = useRouter();
+	const { mutate } = useSWRConfig();
 	const { icons } = useIconPickerLucide();
 
 	const { data: session } = authClient.useSession();
 
+	console.log({ currentData });
+
 	const [isformOpen, setIsformOpen] = useState(isOpen);
 
 	const [open, setOpen] = useState(false);
+	const [debouncedSearch, setDebouncedSearch] = useState("");
+	const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
-	// console.log({ packages });
+	// Debounced search handler
+	const handleSearchChange = useCallback((value: string) => {
+		if (debounceRef.current) {
+			clearTimeout(debounceRef.current);
+		}
 
-	// packages = packages.slice(0, 100);
-	const [filteredPackages, setFilteredPackages] = useState<
-		PackageFilteredData[]
-	>([]);
+		debounceRef.current = setTimeout(() => {
+			setDebouncedSearch(value);
+		}, 200); // 200ms debounce delay
+	}, []);
+
+	// Cleanup timeout on unmount
+	useEffect(() => {
+		return () => {
+			if (debounceRef.current) {
+				clearTimeout(debounceRef.current);
+			}
+		};
+	}, []);
+
+	const truncateVersion = (version: string, maxLength = 5) => {
+		return version.length > maxLength
+			? `${version.slice(0, maxLength)}...`
+			: version;
+	};
+
+	const completePackageOptions = useMemo(() => {
+		return packages.map((pkg) => {
+			const pkgName = Array.isArray(pkg.name) ? pkg.name[0] : pkg.name;
+			return {
+				label: `${pkgName} @ ${truncateVersion(pkg.version)}`,
+				value: JSON.stringify({
+					id: pkg.token ?? pkgName,
+					type: pkg.type,
+				}),
+			};
+		});
+	}, [packages]);
+
+	const getSearchType = (search: string): "cask" | "formula" | null => {
+		const searchLower = search.toLowerCase();
+		if (searchLower.startsWith("c:")) {
+			return "cask";
+		}
+		if (searchLower.startsWith("f:")) {
+			return "formula";
+		}
+		return null;
+	};
+
+	// Memoize filtered options for the MultiSelect - only show results when searching
+	const filteredOptions = useMemo(() => {
+		if (debouncedSearch.length < 2) {
+			return []; // Don't show any options until user types at least 2 characters
+		}
+
+		let searchLower = debouncedSearch.toLowerCase().trim();
+
+		const searchType = getSearchType(searchLower);
+
+		const results: MultiSelectGroup[] = [
+			{
+				heading: "Casks",
+				options: [],
+			},
+			{
+				heading: "Formulas",
+				options: [],
+			},
+		];
+
+		if (searchType) {
+			// Remove the type prefix from the search term for further matching
+			searchLower = searchLower.slice(2);
+		}
+
+		for (const pkg of packages) {
+			if (searchType && pkg.type !== searchType) {
+				continue; // Skip packages that don't match the specified type
+			}
+
+			if (results[0].options.length + results[1].options.length >= 20) {
+				break; // Limit to 20 results for performance
+			}
+
+			const pkgName = Array.isArray(pkg.name) ? pkg.name[0] : pkg.name;
+
+			if (
+				pkgName?.toLowerCase().includes(searchLower) ||
+				pkg.token?.toLowerCase().includes(searchLower) ||
+				pkg.desc?.toLowerCase().includes(searchLower)
+			) {
+				if (pkg.type === "cask") {
+					const pkgHomepage = pkg.homepage;
+					results[0].options.push({
+						label: `${pkgName} @ ${truncateVersion(pkg.version)}`,
+						value: JSON.stringify({
+							id: pkg.token ?? pkgName,
+							type: pkg.type,
+						}),
+						icon: () => (
+							<PackageImage
+								name={pkgName}
+								homepage={pkgHomepage}
+								size={24}
+							/>
+						),
+					});
+					continue;
+				}
+				results[1].options.push({
+					label: `${pkgName} @ ${truncateVersion(pkg.version)}`,
+					value: JSON.stringify({
+						id: pkg.token ?? pkgName,
+						type: pkg.type,
+					}),
+				});
+			}
+		}
+		// Remove empty groups
+		if (results[0]?.options.length < 1) {
+			results.shift();
+		}
+		if (results[1]?.options.length < 1) {
+			results.pop();
+		}
+		return results;
+	}, [packages, debouncedSearch]);
 
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
@@ -120,14 +243,13 @@ export default function CreatePackageListForm({
 			form.setValue(
 				"packages",
 				currentData.packages.map((pkg) =>
-					JSON.stringify(pkg),
+					JSON.stringify({ id: pkg.id, type: pkg.type }),
 				) as unknown as string[],
 			);
 			form.setValue("isPublic", currentData.isPublic);
 			form.setValue("icon", currentData.icon);
 		} else if (defaultPackage) {
 			const defaultPkg = decodeURI(defaultPackage);
-			// console.log({ defaultPkg });
 			form.setValue("packages", [defaultPkg]);
 		}
 	}, [form, currentData, defaultPackage]);
@@ -160,12 +282,9 @@ export default function CreatePackageListForm({
 
 	async function onSubmit(values: z.infer<typeof formSchema>) {
 		try {
-			// toast(
-			// 	<pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4">
-			// 		<code className="text-white">{JSON.stringify(values, null, 2)}</code>
-			// 	</pre>
-			// );
-
+			const parsedPackages: PackageDetails[] = values.packages.map(
+				(pkg) => JSON.parse(pkg),
+			);
 			const newListBody = {
 				...values,
 				owner: {
@@ -175,12 +294,8 @@ export default function CreatePackageListForm({
 					image: session?.user?.image,
 				},
 				likes: currentData ? currentData.likes : [],
-				get packages(): PackageDetails[] {
-					return values.packages.map((pkg) => JSON.parse(pkg));
-				},
-				get installationCommand(): string {
-					return getInstallationCommand(this.packages);
-				},
+				packages: parsedPackages,
+				installationCommand: getInstallationCommand(parsedPackages),
 			};
 
 			let newList;
@@ -214,6 +329,13 @@ export default function CreatePackageListForm({
 				} else {
 					toast.success("List created successfully");
 				}
+				// Revalidate SWR cache to refresh list data
+				mutate(
+					(key: unknown) =>
+						Array.isArray(key) &&
+						typeof key[0] === "string" &&
+						key[0].includes("/api/packageLists"),
+				);
 			} else {
 				toast.error("Failed to create list. Please try again.");
 			}
@@ -221,6 +343,7 @@ export default function CreatePackageListForm({
 			console.error("Form submission error: ", error);
 			toast.error("Failed to submit the form. Please try again.");
 		}
+		setIsformOpen(false);
 	}
 
 	async function handleDelete() {
@@ -232,6 +355,8 @@ export default function CreatePackageListForm({
 
 			if (listDeleted.ok) {
 				toast.success("List deleted successfully");
+				setIsformOpen(false);
+				router.push("/lists/user");
 			} else {
 				toast.error("Failed to delete list. Please try again.");
 			}
@@ -239,42 +364,6 @@ export default function CreatePackageListForm({
 			console.error("List delete error: ", error);
 			toast.error("Failed to delete list. Please try again.");
 		}
-	}
-
-	let timeoutId: NodeJS.Timeout;
-
-	function debounce(cb: (...args: never[]) => void, delay: number) {
-		return (...args: never[]) => {
-			clearTimeout(timeoutId);
-			timeoutId = setTimeout(() => {
-				cb(...args);
-			}, delay);
-		};
-	}
-
-	function handleMultiSelectorKeyup(
-		event: KeyboardEvent<HTMLInputElement>,
-	): void {
-		const inputValue = (event.target as HTMLInputElement).value;
-
-		if (inputValue.length < 1) {
-			setFilteredPackages([]);
-			return;
-		}
-
-		debounce(() => {
-			setFilteredPackages(() => {
-				return packages
-					.filter((pkg) => {
-						return (
-							Array.isArray(pkg.name) ? pkg.name[0] : pkg.name
-						)
-							.toLowerCase()
-							.includes(inputValue);
-					})
-					.slice(0, 10);
-			});
-		}, 500)();
 	}
 
 	return (
@@ -347,94 +436,39 @@ export default function CreatePackageListForm({
 							control={form.control}
 							name="packages"
 							render={({ field }) => {
+								console.log({ fieldValue: field.value });
 								return (
 									<FormItem>
 										<FormLabel>Packages</FormLabel>
 										<FormControl>
-											<MultiSelector
-												shouldFilter={false} // fix issue mentioned in https://github.com/shadcn-ui/ui/discussions/3862
-												values={
-													field.value
-														? field.value
-														: []
+											<MultiSelect
+												autoSize={true}
+												modalPopover
+												hideSelectAll={true}
+												maxCount={3}
+												onSearchChange={
+													handleSearchChange
 												}
-												onValuesChange={(value) => {
-													setFilteredPackages([]);
-													field.onChange(value);
-												}}
-												loop
-											>
-												<MultiSelectorTrigger
-													accessorJSONValue="id"
-													isJSONValue={true}
-												>
-													<MultiSelectorInput
-														onKeyUp={
-															handleMultiSelectorKeyup
-														}
-														placeholder="Search packages"
-													/>
-												</MultiSelectorTrigger>
-												<MultiSelectorContent>
-													<MultiSelectorList
-														showNoResults={true}
-														noResultsText="Start searching for a package..."
-													>
-														{filteredPackages.map(
-															(pkg) => {
-																return (
-																	<Fragment
-																		key={
-																			(pkg.token ??
-																				pkg.name) +
-																			pkg.type
-																		}
-																	>
-																		<MultiSelectorItem
-																			value={JSON.stringify(
-																				{
-																					id:
-																						pkg.token ??
-																						pkg.name,
-																					type: pkg.type,
-																				},
-																			)}
-																		>
-																			<div className="flex items-center justify-between space-x-2 grow">
-																				<div className="flex flex-wrap">
-																					<p className="">
-																						{
-																							pkg.name
-																						}{" "}
-																					</p>
-																					<span className="mx-1">
-																						@
-																					</span>
-																					<p className="text-sm">
-																						{
-																							pkg.version
-																						}
-																					</p>
-																				</div>
-																				<Badge>
-																					{
-																						pkg.type
-																					}
-																				</Badge>
-																			</div>
-																		</MultiSelectorItem>
-																		<Separator />
-																	</Fragment>
-																);
-															},
-														)}
-													</MultiSelectorList>
-												</MultiSelectorContent>
-											</MultiSelector>
+												completeOptions={
+													completePackageOptions
+												}
+												defaultValue={field.value}
+												deduplicateOptions={true}
+												options={filteredOptions}
+												onValueChange={field.onChange}
+												placeholder="Select packages..."
+											/>
 										</FormControl>
 										<FormDescription>
 											Select multiple packages to be
-											included.
+											included. <br />
+											You can use <b>
+												&quot;c:&quot;
+											</b> or <b>&quot;f:&quot;</b> prefix
+											to filter by casks or formulas.{" "}
+											<br />
+											*Package icons might not be 100%
+											accurate.
 										</FormDescription>
 										<FormMessage />
 									</FormItem>
@@ -497,7 +531,7 @@ export default function CreatePackageListForm({
 											onTouchMove={(e) =>
 												e.stopPropagation()
 											} // Fix issue mentioned in https://github.com/radix-ui/primitives/issues/1159#issuecomment-2403909634
-											className="w-[300px] p-0"
+											className="w-75 p-0"
 										>
 											<Command>
 												<CommandInput placeholder="Search icon..." />
@@ -507,15 +541,19 @@ export default function CreatePackageListForm({
 													</CommandEmpty>
 													<CommandGroup>
 														{icons.map(
-															({
-																name,
-																Component,
-																friendly_name,
-															}) => (
+															(
+																{
+																	name,
+																	Component,
+																	friendly_name,
+																},
+																index,
+															) => (
 																<CommandItem
 																	key={name}
 																	value={
-																		friendly_name
+																		friendly_name +
+																		index
 																	}
 																	onSelect={() => {
 																		form.setValue(
@@ -554,42 +592,49 @@ export default function CreatePackageListForm({
 					</form>
 				</Form>
 				<DialogFooter className="flex justify-between items-center">
-					<AlertDialog open={open} onOpenChange={setOpen}>
-						<AlertDialogTrigger asChild>
-							<Button
-								variant="destructive"
-								className="w-full sm:w-auto cursor-pointer"
-							>
-								<Trash2 />
-								Delete
-							</Button>
-						</AlertDialogTrigger>
-						<AlertDialogContent>
-							<AlertDialogHeader>
-								<AlertDialogTitle>
-									Are you absolutely sure?
-								</AlertDialogTitle>
-								<AlertDialogDescription>
-									Do you really want to delete this list? This
-									action cannot be undone.
-								</AlertDialogDescription>
-							</AlertDialogHeader>
-							<AlertDialogFooter>
-								<AlertDialogCancel>Cancel</AlertDialogCancel>
-								<AlertDialogAction
-									className="cursor-pointer"
-									onClick={handleDelete}
-									variant="destructive"
-								>
-									Delete
-								</AlertDialogAction>
-							</AlertDialogFooter>
-						</AlertDialogContent>
-					</AlertDialog>
-					<Separator
-						orientation="vertical"
-						className="bg-muted-foreground h-5! mx-4"
-					/>
+					{currentData && (
+						<>
+							<AlertDialog open={open} onOpenChange={setOpen}>
+								<AlertDialogTrigger asChild>
+									<Button
+										variant="destructive"
+										className="w-full sm:w-auto cursor-pointer"
+									>
+										<Trash2 />
+										Delete
+									</Button>
+								</AlertDialogTrigger>
+								<AlertDialogContent>
+									<AlertDialogHeader>
+										<AlertDialogTitle>
+											Are you absolutely sure?
+										</AlertDialogTitle>
+										<AlertDialogDescription>
+											Do you really want to delete this
+											list? This action cannot be undone.
+										</AlertDialogDescription>
+									</AlertDialogHeader>
+									<AlertDialogFooter>
+										<AlertDialogCancel>
+											Cancel
+										</AlertDialogCancel>
+										<AlertDialogAction
+											className="cursor-pointer"
+											onClick={handleDelete}
+											variant="destructive"
+										>
+											Delete
+										</AlertDialogAction>
+									</AlertDialogFooter>
+								</AlertDialogContent>
+							</AlertDialog>
+							<Separator
+								orientation="vertical"
+								className="bg-muted-foreground h-5! mx-4"
+							/>
+						</>
+					)}
+
 					<Button
 						type="submit"
 						form="create-package-list-form"

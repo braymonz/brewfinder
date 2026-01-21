@@ -12,9 +12,9 @@ import {
 	getFilteredRowModel,
 } from "@tanstack/react-table";
 
-import { XCircleIcon } from "lucide-react";
+import { XCircleIcon, Loader2 } from "lucide-react";
 
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import {
 	Table,
@@ -27,7 +27,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import {
 	Select,
 	SelectContent,
@@ -46,13 +46,61 @@ export function DataTable<TData, TValue>({
 	columns,
 	data,
 	packagesType,
-}: DataTableProps<TData, TValue>) {
+}: Readonly<DataTableProps<TData, TValue>>) {
+	const router = useRouter();
+	const searchParams = useSearchParams();
+	const [isPending, startTransition] = useTransition();
+
 	const [sorting, setSorting] = useState<SortingState>([]);
 	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-
 	const [typeFilter, setTypeFilter] = useState<string>("all");
+	const [searchValue, setSearchValue] = useState(
+		searchParams.get("search") ?? "",
+	);
 
-	// set filter for packages type based on query string
+	const debounceRef = useRef<NodeJS.Timeout | null>(null);
+
+	const updateSearchParam = useCallback(
+		(key: string, value: string | null) => {
+			const params = new URLSearchParams(searchParams.toString());
+			if (value) {
+				params.set(key, value);
+			} else {
+				params.delete(key);
+			}
+			const newUrl = params.toString()
+				? `?${params.toString()}`
+				: globalThis.location.pathname;
+			startTransition(() => {
+				router.replace(newUrl, { scroll: false });
+			});
+		},
+		[router, searchParams],
+	);
+
+	// Debounced search update
+	const debouncedUpdateSearch = useCallback(
+		(value: string) => {
+			if (debounceRef.current) {
+				clearTimeout(debounceRef.current);
+			}
+			debounceRef.current = setTimeout(() => {
+				updateSearchParam("search", value || null);
+			}, 300);
+		},
+		[updateSearchParam],
+	);
+
+	// Cleanup debounce on unmount
+	useEffect(() => {
+		return () => {
+			if (debounceRef.current) {
+				clearTimeout(debounceRef.current);
+			}
+		};
+	}, []);
+
+	// Set filter for packages type based on query string
 	useEffect(() => {
 		if (packagesType) {
 			setTypeFilter(packagesType);
@@ -74,62 +122,65 @@ export function DataTable<TData, TValue>({
 		},
 	});
 
+	// Sync type filter with table
 	useEffect(() => {
-		if (typeFilter !== "all") {
-			table.getColumn("type")?.setFilterValue(typeFilter);
-		} else {
+		if (typeFilter === "all") {
 			table.getColumn("type")?.setFilterValue(undefined);
+		} else {
+			table.getColumn("type")?.setFilterValue(typeFilter);
 		}
 	}, [typeFilter, table]);
 
-	const searchParams = useSearchParams();
-
+	// Sync search from URL to table
 	const search = searchParams.get("search");
-
 	useEffect(() => {
+		setSearchValue(search ?? "");
 		table.getColumn("name")?.setFilterValue(search);
 	}, [search, table]);
+
+	const handleSearchChange = (value: string) => {
+		setSearchValue(value);
+		table.getColumn("name")?.setFilterValue(value);
+		debouncedUpdateSearch(value);
+	};
+
+	const handleClearSearch = () => {
+		setSearchValue("");
+		table.getColumn("name")?.setFilterValue("");
+		updateSearchParam("search", null);
+	};
 
 	return (
 		<div>
 			<div className="flex flex-col sm:flex-row items-center pb-4 gap-4 justify-between">
 				<div className="relative flex sm:max-w-md bg-secondary w-full rounded-md">
 					<Input
-						className="pr-9"
+						className="pr-16"
 						placeholder="Filter packages..."
-						value={
-							(table
-								.getColumn("name")
-								?.getFilterValue() as string) ?? ""
+						value={searchValue}
+						onChange={(event) =>
+							handleSearchChange(event.target.value)
 						}
-						onChange={(event) => {
-							window.history.replaceState(
-								null,
-								"",
-								`?search=${event.target.value}`,
-							);
-							table
-								.getColumn("name")
-								?.setFilterValue(event.target.value);
-						}}
 					/>
-					<Button
-						asChild
-						variant="ghost"
-						onClick={() => {
-							window.history.replaceState(null, "", `?search=`);
-							table.getColumn("name")?.setFilterValue("");
-						}}
-						className="cursor-pointer absolute right-0"
-					>
-						<div>
-							<XCircleIcon className="h-4 w-4" />
-						</div>
-					</Button>
+					<div className="absolute right-0 h-full flex items-center gap-1 pr-1">
+						{isPending ? (
+							<Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+						) : (
+							<Button
+								variant="ghost"
+								size="icon"
+								onClick={handleClearSearch}
+								className="cursor-pointer h-8 w-8"
+								aria-label="Clear search"
+							>
+								<XCircleIcon className="h-4 w-4" />
+							</Button>
+						)}
+					</div>
 				</div>
 
 				<Select value={typeFilter} onValueChange={setTypeFilter}>
-					<SelectTrigger className="w-full sm:w-[180px] bg-secondary">
+					<SelectTrigger className="w-full sm:w-45 bg-secondary">
 						<SelectValue placeholder="Select type" />
 					</SelectTrigger>
 					<SelectContent>
@@ -144,19 +195,17 @@ export function DataTable<TData, TValue>({
 					<TableHeader className="bg-secondary">
 						{table.getHeaderGroups().map((headerGroup) => (
 							<TableRow key={headerGroup.id}>
-								{headerGroup.headers.map((header) => {
-									return (
-										<TableHead key={header.id}>
-											{header.isPlaceholder
-												? null
-												: flexRender(
-														header.column.columnDef
-															.header,
-														header.getContext(),
-													)}
-										</TableHead>
-									);
-								})}
+								{headerGroup.headers.map((header) => (
+									<TableHead key={header.id}>
+										{header.isPlaceholder
+											? null
+											: flexRender(
+													header.column.columnDef
+														.header,
+													header.getContext(),
+												)}
+									</TableHead>
+								))}
 							</TableRow>
 						))}
 					</TableHeader>
@@ -194,19 +243,22 @@ export function DataTable<TData, TValue>({
 				</Table>
 			</div>
 			<div className="flex items-center justify-between space-x-2 py-4 bg-secondary/50 backdrop-blur-md px-2">
-				<div className="text-sm text-muted-foreground ">
-					Showing{" "}
-					{table.getState().pagination.pageIndex *
-						table.getState().pagination.pageSize +
-						1}
-					-
-					{Math.min(
-						(table.getState().pagination.pageIndex + 1) *
-							table.getState().pagination.pageSize,
-						table.getFilteredRowModel().rows.length,
-					)}{" "}
-					of {table.getFilteredRowModel().rows.length} results
+				<div className="text-sm text-muted-foreground">
+					<div>
+						Showing{" "}
+						{table.getState().pagination.pageIndex *
+							table.getState().pagination.pageSize +
+							1}
+						-
+						{Math.min(
+							(table.getState().pagination.pageIndex + 1) *
+								table.getState().pagination.pageSize,
+							table.getFilteredRowModel().rows.length,
+						)}{" "}
+						of {table.getFilteredRowModel().rows.length} results
+					</div>
 				</div>
+
 				<div className="space-x-2">
 					<Button
 						variant="outline"

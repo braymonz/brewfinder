@@ -7,9 +7,6 @@ import { CONTACT_EMAIL, GITHUB_URL, X_URL } from "@/lib/constants";
 export default function Footer() {
 	return (
 		<footer className="border-t text-secondary-foreground relative bg-secondary/50 backdrop-blur-xl">
-			{/*<div className="w-full h-full top-0 left-0 bg-[url(/pattern-randomized.svg)] not-dark:bg-[url(/pattern-randomized-light.svg)] bg-cover absolute -z-40">*/}
-			{/*	<div className="bg-secondary w-full h-full top-0 left-0 absolute -z-50"></div>*/}
-			{/*</div>*/}
 			<div className="container mx-auto px-4 py-8">
 				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
 					<div className="space-y-4">
@@ -173,8 +170,7 @@ export default function Footer() {
 				</div>
 				<Separator className="my-4" />
 				<div className="text-center text-sm text-muted-foreground">
-					© {new Date().getFullYear()} Brewfinder. All rights
-					reserved.
+					Brewfinder is not associated with Homebrew in any way.
 				</div>
 			</div>
 		</footer>

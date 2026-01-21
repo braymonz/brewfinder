@@ -21,7 +21,7 @@ const UserSchema = new mongoose.Schema<User>({
 export type PackageList = {
 	_id?: ObjectId;
 	name: string;
-	description: string;
+	description?: string;
 	packages: [PackageDetails];
 	installationCommand: string;
 	owner: User;
@@ -35,7 +35,7 @@ export type PackageList = {
 const schema = new mongoose.Schema<PackageList>(
 	{
 		name: { type: String, required: true },
-		description: { type: String, required: true },
+		description: { type: String, required: false },
 		packages: { type: [PackageDetailsSchema], required: true },
 		installationCommand: { type: String, required: true },
 		owner: { type: UserSchema, required: true },
