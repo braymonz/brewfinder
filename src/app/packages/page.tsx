@@ -8,6 +8,7 @@ import { SortAsc, SortDesc } from "lucide-react";
 import Link from "next/link";
 import { DataTable } from "@/components/DataTable";
 import { ColumnDef } from "@tanstack/react-table";
+import PackageImage from "@/components/PackageImage";
 
 export default function Packages() {
 	const searchParams = useSearchParams();
@@ -48,9 +49,14 @@ export default function Packages() {
 				const pkg = row.original;
 				return (
 					<Link
-						href={`/packages/${pkg.token ?? pkg.name}?type=${pkg.type}`}
-						className="font-medium"
+						href={`/packages/${encodeURIComponent(pkg.token ?? pkg.name)}?type=${pkg.type}`}
+						className="font-medium flex items-center gap-2"
 					>
+						<PackageImage
+							name={pkg.name}
+							size={24}
+							homepage={pkg.homepage}
+						/>
 						{row.getValue("name")}
 					</Link>
 				);
@@ -123,6 +129,7 @@ export default function Packages() {
 				columns={columns}
 				data={packagesData}
 			/>
+			<div className="mt-4 text-right text-xs text-muted-foreground">*Package icons might not be 100% accurate.</div>
 		</div>
 	);
 }

@@ -102,6 +102,7 @@ export type PackageFilteredData = {
 	type: string;
 	version: string;
 	desc: string;
+	homepage: string;
 };
 
 export interface PackageAnalytics {

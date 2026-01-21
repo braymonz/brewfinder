@@ -14,6 +14,7 @@ import useSWR from "swr";
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { authClient } from "@/lib/auth-client";
+import PackageImage from "./PackageImage";
 
 interface PackageHeaderProps {
 	name: string;
@@ -55,14 +56,12 @@ export function PackageHeader({
 	return (
 		<Card className="mb-8">
 			<CardContent className="flex items-start space-x-4 flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 p-6 rounded-lg">
-				<div className="bg-primary text-primary-foreground p-3 rounded-lg">
-					{packageType === "formula" ? (
-						<Beer size={32} />
-					) : (
-						<Package size={32} />
-					)}
-				</div>
-				<div className="flex flex-col md:flex-row flex-grow justify-between items-start">
+					<PackageImage
+						className="block w-auto h-full object-cover object-center"
+						name={name}
+						homepage={homepage}
+					/>
+				<div className="flex flex-col md:flex-row grow justify-between items-start">
 					<div>
 						<h1 className="text-3xl font-bold">{name}</h1>
 						<p className="text-xl text-muted-foreground mt-2">

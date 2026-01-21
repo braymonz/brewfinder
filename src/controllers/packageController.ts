@@ -25,13 +25,14 @@ export const getAll = async () => {
 		const packagesFiltered: PackageFilteredData[] = [];
 
 		freshData.forEach((pkg: Package) => {
-			const { name, token, tap, versions, version, desc } = pkg;
+			const { name, token, tap, versions, version, desc, homepage } = pkg;
 
 			packagesFiltered.push({
 				name: Array.isArray(name) ? name[0] : name,
 				token,
 				type: tap.includes("cask") ? "cask" : "formula",
 				version: versions?.stable ?? version,
+				homepage,
 				desc,
 			});
 		});
