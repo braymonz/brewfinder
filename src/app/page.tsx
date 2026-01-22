@@ -5,6 +5,7 @@ import { Package, Download, Star, ArrowUpRight } from "lucide-react";
 import { PopularPackagesChart } from "@/components/PopularPackagesChart";
 import { PackageAnalytics } from "@/types/homebrew";
 import { SearchForm } from "@/components/SearchForm";
+import { TextShimmer } from "@/components/motion-primitives/text-shimmer";
 
 async function getAnalyticsData() {
 	const [formulaRes, caskRes, releaseRes] = await Promise.all([
@@ -44,7 +45,9 @@ export default async function Home() {
 		<div className="space-y-12 grow flex flex-col justify-center">
 			<section className="text-center space-y-6 min-h-80 flex flex-col justify-center items-center">
 				<h1 className="text-4xl font-bold mb-4 bg-background">
-					Welcome to Brewfinder
+					<TextShimmer duration={5}>
+						Welcome to Brewfinder
+					</TextShimmer>
 				</h1>
 				<p className="text-xl text-muted-foreground bg-background">
 					Discover, save, and install{" "}
@@ -70,7 +73,7 @@ export default async function Home() {
 				<span className="text-muted-foreground text-sm block mb-4">
 					(Last 30 Days)
 				</span>
-				<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+				<div className="grid grid-cols-1 md:grid-cols-3 gap-8">
 					<Card>
 						<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
 							<CardTitle className="text-sm font-medium">
@@ -144,7 +147,7 @@ export default async function Home() {
 				<h2 className="text-2xl font-semibold mb-4 inline-block bg-background">
 					Formulae vs Casks
 				</h2>
-				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+				<div className="grid grid-cols-1 md:grid-cols-2 gap-8">
 					<Card>
 						<CardHeader>
 							<CardTitle>Formulae</CardTitle>
@@ -192,7 +195,7 @@ export default async function Home() {
 						</CardContent>
 					</Card>
 				</div>
-				<Card className="mt-4">
+				<Card className="mt-8">
 					<CardContent className="py-4">
 						<div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
 							<div className="text-sm text-muted-foreground">
@@ -216,7 +219,7 @@ export default async function Home() {
 					</CardContent>
 				</Card>
 			</section>
-			<section>
+			<section className="mb-8">
 				<h2 className="text-2xl font-semibold mb-4 inline-block bg-background">
 					New to Homebrew?
 				</h2>

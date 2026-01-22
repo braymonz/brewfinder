@@ -5,6 +5,7 @@ import { FormEvent } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
+import { GlowEffectButton } from "./GlowEffectButton";
 
 export function SearchForm() {
 	const router = useRouter();
@@ -28,10 +29,10 @@ export function SearchForm() {
 				placeholder="Search for Homebrew packages..."
 				className="text-lg py-6 bg-secondary w-full m-0"
 			/>
-			<Button type="submit" size="lg" className="cursor-pointer">
+			<GlowEffectButton type="submit" size="lg" className="cursor-pointer">
 				<Search className="h-5 w-5" />
 				Search
-			</Button>
+			</GlowEffectButton>
 		</form>
 	);
 }

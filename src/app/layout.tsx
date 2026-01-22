@@ -37,8 +37,17 @@ export default function RootLayout({
 	return (
 		<html lang="en">
 			<body
-				className={`${geistSans.variable} ${geistMono.variable} relative overflow-y-auto antialiased min-h-screen flex flex-col `}
+				className={`${geistSans.variable} ${geistMono.variable} relative overflow-y-auto antialiased min-h-screen flex flex-col bg-background`}
 			>
+				{/* Top glow effect */}
+				<div
+					className="pointer-events-none fixed inset-x-0 top-0 z-10 h-150"
+					style={{
+						background:
+							"radial-gradient(ellipse 80% 70% at 50% 0%, hsl(var(--primary) / 0.2), transparent)",
+					}}
+				/>
+
 				{/* <div className="bg-[url(/pattern-randomized.svg)] not-dark:bg-[url(/pattern-randomized-light.svg)] "> */}
 				<div>
 					<ThemeProvider
