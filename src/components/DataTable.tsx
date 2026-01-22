@@ -13,7 +13,7 @@ import {
 	type FilterFn,
 } from "@tanstack/react-table";
 
-import { packageMatchesSearch } from "@/lib/package-search";
+import { getSearchTypePrefix, packageMatchesSearch } from "@/lib/package-search";
 import type { PackageFilteredData } from "@/types/homebrew";
 
 import { XCircleIcon, Loader2 } from "lucide-react";
@@ -72,13 +72,7 @@ export function DataTable<TData, TValue>({
 	) => {
 		const pkg = row.original;
 		const result = packageMatchesSearch(pkg, filterValue);
-		if (result.match) {
-			if (result.type) {
-				setTypeFilter(result.type);
-			}
-			return true;
-		}
-		return false;
+		return result.match;
 	};
 	const updateSearchParam = useCallback(
 		(key: string, value: string | null) => {
@@ -163,6 +157,12 @@ export function DataTable<TData, TValue>({
 	const handleSearchChange = (value: string) => {
 		setSearchValue(value);
 		debouncedUpdateSearch(value);
+
+		// Update type filter based on search prefix
+		const { type } = getSearchTypePrefix(value);
+		if (type) {
+			setTypeFilter(type);
+		}
 	};
 
 	const handleClearSearch = () => {
