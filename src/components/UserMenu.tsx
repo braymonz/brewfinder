@@ -19,7 +19,6 @@ type Props = {
 };
 
 export function UserMenu({ user }: Readonly<Props>) {
-	console.log("user in UserMenu:", user);
 	return (
 		<DropdownMenu modal={false}>
 			<DropdownMenuTrigger asChild>

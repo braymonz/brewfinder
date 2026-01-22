@@ -95,7 +95,7 @@ export function AppSidebar({ className }: Props) {
 											</Link>
 										</Button>
 									) : (
-										<UserMenu session={session.session} />
+										<UserMenu user={session.user} />
 									)}
 									<Separator
 										orientation="vertical"

@@ -20,7 +20,7 @@ interface PackageListCardProps {
 	packageCount: number;
 	listId: string;
 	installationCommand: string;
-	listDescription: string;
+	listDescription?: string;
 	owner: string;
 	icon: string;
 }

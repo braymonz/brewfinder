@@ -67,5 +67,10 @@
 		"prettier": "^3.7.4",
 		"tailwindcss": "^4.1.18",
 		"typescript": "^5.9.3"
+	},
+	"pnpm": {
+		"overrides": {
+			"mongodb": "6.21.0"
+		}
 	}
 }
