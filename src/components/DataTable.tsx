@@ -13,7 +13,10 @@ import {
 	type FilterFn,
 } from "@tanstack/react-table";
 
-import { getSearchTypePrefix, packageMatchesSearch } from "@/lib/package-search";
+import {
+	getSearchTypePrefix,
+	packageMatchesSearch,
+} from "@/lib/package-search";
 import type { PackageFilteredData } from "@/types/homebrew";
 
 import { XCircleIcon, Loader2 } from "lucide-react";
@@ -172,7 +175,7 @@ export function DataTable<TData, TValue>({
 
 	return (
 		<div>
-			<div className="flex flex-col sm:flex-row items-center pb-4 gap-4 justify-between">
+			<div className="flex flex-col sm:flex-row items-center gap-4 pb-2 justify-between">
 				<div className="relative flex sm:max-w-md bg-secondary w-full rounded-md">
 					<Input
 						className="pr-16"
@@ -210,6 +213,10 @@ export function DataTable<TData, TValue>({
 					</SelectContent>
 				</Select>
 			</div>
+			<p className="text-foreground text-sm mb-4 text">
+				You can use <b>&quot;c:&quot;</b> or <b>&quot;f:&quot;</b>{" "}
+				prefix to filter by casks or formulas.{" "}
+			</p>
 			<div className="rounded-md border">
 				<Table>
 					<TableHeader className="bg-secondary">
