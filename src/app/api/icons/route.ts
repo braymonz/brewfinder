@@ -1,3 +1,8 @@
+// Gets icons from macosicons.com with caching and rate limiting (if needed)
+// Fallbacks to Google favicons if not found.
+// Not being used for now due to macosicons.com API limitations (free tier 2 req/sec | max 50 requests per month).
+// More info https://docs.macosicons.com/api-management
+
 import { NextRequest, NextResponse } from "next/server";
 import { redis } from "@/lib/redis-io";
 import { macosIconsRateLimiter } from "@/lib/rate-limiter";
