@@ -45,6 +45,10 @@ import {
 import { PackageFilteredData } from "@/types/homebrew";
 import { formSchema } from "@/schemas/zod";
 import {
+	filterPackages,
+	getPackageName,
+} from "@/lib/package-search";
+import {
 	IconRendererLucide,
 	useIconPickerLucide,
 } from "@/components/IconPicker";
@@ -87,8 +91,6 @@ export default function CreatePackageListForm({
 	const { icons } = useIconPickerLucide();
 
 	const { data: session } = authClient.useSession();
-
-	console.log({ currentData });
 
 	const [isformOpen, setIsformOpen] = useState(isOpen);
 
@@ -135,62 +137,22 @@ export default function CreatePackageListForm({
 		});
 	}, [packages]);
 
-	const getSearchType = (search: string): "cask" | "formula" | null => {
-		const searchLower = search.toLowerCase();
-		if (searchLower.startsWith("c:")) {
-			return "cask";
-		}
-		if (searchLower.startsWith("f:")) {
-			return "formula";
-		}
-		return null;
-	};
-
 	// Memoize filtered options for the MultiSelect - only show results when searching
 	const filteredOptions = useMemo(() => {
-		if (debouncedSearch.length < 2) {
-			return []; // Don't show any options until user types at least 2 characters
-		}
+		const { casks, formulas } = filterPackages(packages, debouncedSearch, {
+			maxResults: 20,
+			minSearchLength: 2,
+		});
 
-		let searchLower = debouncedSearch.toLowerCase().trim();
+		const results: MultiSelectGroup[] = [];
 
-		const searchType = getSearchType(searchLower);
-
-		const results: MultiSelectGroup[] = [
-			{
+		if (casks.length > 0) {
+			results.push({
 				heading: "Casks",
-				options: [],
-			},
-			{
-				heading: "Formulas",
-				options: [],
-			},
-		];
-
-		if (searchType) {
-			// Remove the type prefix from the search term for further matching
-			searchLower = searchLower.slice(2);
-		}
-
-		for (const pkg of packages) {
-			if (searchType && pkg.type !== searchType) {
-				continue; // Skip packages that don't match the specified type
-			}
-
-			if (results[0].options.length + results[1].options.length >= 20) {
-				break; // Limit to 20 results for performance
-			}
-
-			const pkgName = Array.isArray(pkg.name) ? pkg.name[0] : pkg.name;
-
-			if (
-				pkgName?.toLowerCase().includes(searchLower) ||
-				pkg.token?.toLowerCase().includes(searchLower) ||
-				pkg.desc?.toLowerCase().includes(searchLower)
-			) {
-				if (pkg.type === "cask") {
+				options: casks.map((pkg) => {
+					const pkgName = getPackageName(pkg);
 					const pkgHomepage = pkg.homepage;
-					results[0].options.push({
+					return {
 						label: `${pkgName} @ ${truncateVersion(pkg.version)}`,
 						value: JSON.stringify({
 							id: pkg.token ?? pkgName,
@@ -203,25 +165,27 @@ export default function CreatePackageListForm({
 								size={24}
 							/>
 						),
-					});
-					continue;
-				}
-				results[1].options.push({
-					label: `${pkgName} @ ${truncateVersion(pkg.version)}`,
-					value: JSON.stringify({
-						id: pkg.token ?? pkgName,
-						type: pkg.type,
-					}),
-				});
-			}
+					};
+				}),
+			});
 		}
-		// Remove empty groups
-		if (results[0]?.options.length < 1) {
-			results.shift();
+
+		if (formulas.length > 0) {
+			results.push({
+				heading: "Formulas",
+				options: formulas.map((pkg) => {
+					const pkgName = getPackageName(pkg);
+					return {
+						label: `${pkgName} @ ${truncateVersion(pkg.version)}`,
+						value: JSON.stringify({
+							id: pkg.token ?? pkgName,
+							type: pkg.type,
+						}),
+					};
+				}),
+			});
 		}
-		if (results[1]?.options.length < 1) {
-			results.pop();
-		}
+
 		return results;
 	}, [packages, debouncedSearch]);
 
@@ -436,7 +400,6 @@ export default function CreatePackageListForm({
 							control={form.control}
 							name="packages"
 							render={({ field }) => {
-								console.log({ fieldValue: field.value });
 								return (
 									<FormItem>
 										<FormLabel>Packages</FormLabel>

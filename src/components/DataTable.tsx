@@ -10,7 +10,11 @@ import {
 	getSortedRowModel,
 	type ColumnFiltersState,
 	getFilteredRowModel,
+	type FilterFn,
 } from "@tanstack/react-table";
+
+import { packageMatchesSearch } from "@/lib/package-search";
+import type { PackageFilteredData } from "@/types/homebrew";
 
 import { XCircleIcon, Loader2 } from "lucide-react";
 
@@ -60,6 +64,22 @@ export function DataTable<TData, TValue>({
 
 	const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
+	// Custom filter function using packageMatchesSearch
+	const packageSearchFilter: FilterFn<PackageFilteredData> = (
+		row,
+		_columnId,
+		filterValue,
+	) => {
+		const pkg = row.original;
+		const result = packageMatchesSearch(pkg, filterValue);
+		if (result.match) {
+			if (result.type) {
+				setTypeFilter(result.type);
+			}
+			return true;
+		}
+		return false;
+	};
 	const updateSearchParam = useCallback(
 		(key: string, value: string | null) => {
 			const params = new URLSearchParams(searchParams.toString());
@@ -86,7 +106,7 @@ export function DataTable<TData, TValue>({
 			}
 			debounceRef.current = setTimeout(() => {
 				updateSearchParam("search", value || null);
-			}, 300);
+			}, 200);
 		},
 		[updateSearchParam],
 	);
@@ -116,10 +136,13 @@ export function DataTable<TData, TValue>({
 		getSortedRowModel: getSortedRowModel(),
 		onColumnFiltersChange: setColumnFilters,
 		getFilteredRowModel: getFilteredRowModel(),
+		globalFilterFn: packageSearchFilter as unknown as FilterFn<TData>,
 		state: {
 			sorting,
 			columnFilters,
+			globalFilter: searchValue,
 		},
+		onGlobalFilterChange: setSearchValue,
 	});
 
 	// Sync type filter with table
@@ -135,18 +158,15 @@ export function DataTable<TData, TValue>({
 	const search = searchParams.get("search");
 	useEffect(() => {
 		setSearchValue(search ?? "");
-		table.getColumn("name")?.setFilterValue(search);
-	}, [search, table]);
+	}, [search]);
 
 	const handleSearchChange = (value: string) => {
 		setSearchValue(value);
-		table.getColumn("name")?.setFilterValue(value);
 		debouncedUpdateSearch(value);
 	};
 
 	const handleClearSearch = () => {
 		setSearchValue("");
-		table.getColumn("name")?.setFilterValue("");
 		updateSearchParam("search", null);
 	};
 
