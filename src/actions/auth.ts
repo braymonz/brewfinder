@@ -22,7 +22,7 @@ const catchAuthError = (
 	} else {
 		console.error("Unexpected error:", error);
 	}
-	console.log({ error });
+	console.error({ error });
 	redirect(`/${action}?error=unknown_error`);
 };
 
@@ -30,6 +30,7 @@ export const loginWithSocials = async (
 	provider: Provider["id"],
 	callbackURL?: string,
 ) => {
+	let redirectUrl = "";
 	try {
 		const { redirect: isRedirectRequired, url } =
 			await auth.api.signInSocial({
@@ -40,11 +41,12 @@ export const loginWithSocials = async (
 			});
 
 		if (url && isRedirectRequired) {
-			redirect(url);
+			redirectUrl = url;
 		}
 	} catch (error: unknown) {
 		catchAuthError(error, "signin");
 	}
+	redirect(redirectUrl);
 };
 
 export const signOut = async () => {
