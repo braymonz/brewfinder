@@ -48,11 +48,13 @@ const authConfig = {
 		github: {
 			clientId: process.env.BETTER_AUTH_GITHUB_ID as string,
 			clientSecret: process.env.BETTER_AUTH_GITHUB_SECRET as string,
+			redirectUri: process.env.BETTER_AUTH_GITHUB_REDIRECT_URI as string,
 		},
 		google: {
 			clientId: process.env.BETTER_AUTH_GOOGLE_CLIENT_ID as string,
 			clientSecret: process.env
 				.BETTER_AUTH_GOOGLE_CLIENT_SECRET as string,
+			redirectUri: process.env.BETTER_AUTH_GOOGLE_REDIRECT_URI as string,
 		},
 	},
 };
